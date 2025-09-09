@@ -1,0 +1,3 @@
+you are still getting "Could not extract functions" even after updating ytdl-core. This means the library is currently broken for some or all YouTube videos due to changes on YouTube's side. This is a known, recurring issue with ytdl-core.
+
+Can we try building a springboot app instead?

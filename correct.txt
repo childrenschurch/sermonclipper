@@ -1,0 +1,8 @@
+The app is downloading well now.wow. Thank you so much.
+I have created a repo for it, commit and push it for me..
+git init
+git add .
+git commit -m "App successfully downloads 360p"
+git branch -M main
+git remote add origin https://github.com/childrenschurch/sermonclipper.git
+git push -u origin main

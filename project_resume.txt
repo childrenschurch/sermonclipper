@@ -1,0 +1,24 @@
+Project: YouTube Clip Downloader Web App
+
+Summary of our conversation so you can pick up where we left off.
+
+1.  **Initial Goal:**
+    *   Create a simple web application using Node.js and Express to download YouTube video clips.
+
+2.  **Technical Problem:**
+    *   We discovered that the common Node.js library for this (`ytdl-core`) is often broken due to YouTube's updates.
+
+3.  **The Solution:**
+    *   Instead of a library, we decided to use a more robust command-line tool called `yt-dlp`. The Node.js app will run this tool in the background. This is a much more stable approach.
+
+4.  **Hosting Plan:**
+    *   We initially discussed hosting on Namecheap, but their shared hosting plans do not allow installing custom tools like `yt-dlp`.
+    *   We have decided to use **Google Cloud Platform** instead, as it's more flexible and has a generous free tier.
+
+5.  **Current Plan & Next Steps:**
+    *   **Platform:** Google Cloud Run (a serverless service).
+    *   **Cost:** Should be $0 by using the free tier.
+    *   **My immediate task:** I will now start building the Node.js/Express application and create a `Dockerfile` for it.
+    *   **Your next step (after I'm done):** I will guide you on how to deploy the application to your Google Cloud account.
+
+When you're back, just let me know you're ready to continue, and I'll start building the app.

@@ -1,0 +1,38 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Clip Downloader</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ClipDown</h1>
+            <p>Download YouTube Clips in 360p</p>
+        </header>
+        <main>
+            <% if (error) { %>
+                <div class="error-message">
+                    <p><%= error %></p>
+                </div>
+            <% } %>
+            <form action="/download" method="POST" class="download-form">
+                <div class="form-group">
+                    <label for="url">YouTube Clip URL</label>
+                    <input type="text" id="url" name="url" placeholder="Paste your YouTube clip link here" required>
+                </div>
+                <button type="submit">Download</button>
+            </form>
+        </main>
+        <footer>
+            <p>&copy; 2025 CH CHURCH APP. All rights reserved.</p>
+        </footer>
+    </div>
+</body>
+</html>
