@@ -1,102 +1,114 @@
 const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 const { spawn } = require("child_process");
 const path = require("path");
-const app = express();
-const PORT = process.env.PORT || 3000;
+const fs = require("fs");
+const crypto = require("crypto");
 
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
+const PORT = process.env.PORT || 3000;
 const ytdlpCommand = process.platform === 'win32' ? 'C:\\Users\\dell\\Documents\\yt-dlp\\yt-dlp.exe' : 'yt-dlp';
 
-function isValidUrl(string) {
-  try {
-    new URL(string);
-    return true;
-  } catch (_) {
-    return false;
-  }
+// Create temp directory if it doesn't exist
+const tempDir = path.join(__dirname, 'temp_downloads');
+if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir);
 }
 
 app.set("view engine", "ejs");
 app.use(express.static("public"));
-app.use(express.urlencoded({ extended: true }));
 
 app.get("/", (req, res) => {
-  res.render("index", { error: null, success: null });
+    res.render("index");
 });
 
-app.post("/download", (req, res) => {
-  const { url: videoUrl, quality } = req.body;
+app.get("/download-file/:filename", (req, res) => {
+    const { filename } = req.params;
+    const filePath = path.join(tempDir, filename);
 
-  // Validate quality and set format string
-  const qualityMap = {
-    '1080': 'bestvideo[height<=1080]+bestaudio/best[height<=1080]',
-    '720': 'bestvideo[height<=720]+bestaudio/best[height<=720]',
-    '360': 'best[height<=360]' // 360p often has audio included
-  };
-  const format = qualityMap[quality] || qualityMap['360']; // Default to 360p
-
-  if (!videoUrl || !isValidUrl(videoUrl)) {
-    return res.render("index", { error: "Please enter a valid URL.", success: null });
-  }
-
-  const titleProcess = spawn(ytdlpCommand, ["--get-title", videoUrl]);
-  let videoTitle = "video";
-  let titleError = "";
-
-  titleProcess.stderr.on('data', (data) => {
-    titleError += data.toString();
-  });
-
-  titleProcess.stdout.on("data", (data) => {
-    videoTitle = data.toString().trim().replace(/[\/:*?"<>|]/g, "-");
-  });
-
-  titleProcess.on("error", (error) => {
-    console.error(`Failed to start title process: ${error.message}`);
-    if (!res.headersSent) {
-      res.status(500).render("index", { error: `Failed to start the download process. Check if the path to yt-dlp.exe is correct.`, success: null });
+    if (fs.existsSync(filePath)) {
+        res.download(filePath, (err) => {
+            if (err) {
+                console.error("Error sending file:", err);
+            }
+            // Clean up the file after download
+            fs.unlink(filePath, (unlinkErr) => {
+                if (unlinkErr) {
+                    console.error("Error deleting temp file:", unlinkErr);
+                }
+            });
+        });
+    } else {
+        res.status(404).send("File not found.");
     }
-  });
-
-  titleProcess.on("close", (code) => {
-    if (code !== 0) {
-      console.error(`yt-dlp (title) exited with code ${code}: ${titleError}`);
-      if (!res.headersSent) {
-        res.status(500).render("index", { error: "Failed to get video information. The URL might be invalid or unsupported.", success: null });
-      }
-      return;
-    }
-
-    const safeVideoTitle = `${videoTitle} [${quality}p]`;
-    res.header("Content-Disposition", `attachment; filename="${safeVideoTitle}.mp4"`);
-
-    const ytdlp = spawn(ytdlpCommand, [
-      "-f", format,
-      "--output", "-",
-      videoUrl
-    ]);
-
-    ytdlp.stdout.pipe(res);
-
-    ytdlp.on("error", (error) => {
-      console.error(`Failed to start download process: ${error.message}`);
-      if (!res.headersSent) {
-        res.status(500).send("Error starting download.");
-      }
-    });
-
-    ytdlp.stderr.on('data', (data) => {
-      console.error(`yt-dlp stderr: ${data}`);
-    });
-
-    ytdlp.on("close", (code) => {
-      if (code !== 0) {
-        console.error(`yt-dlp (download) process exited with code ${code}`);
-      }
-      res.end();
-    });
-  });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+io.on("connection", (socket) => {
+    console.log("A user connected:", socket.id);
+
+    socket.on("download-video", ({ videoUrl, quality }) => {
+        console.log(`Received download request for ${videoUrl} at ${quality}p from ${socket.id}`);
+
+        const qualityMap = {
+            '1080': 'bestvideo[height<=1080]+bestaudio/best[height<=1080]',
+            '720': 'bestvideo[height<=720]+bestaudio/best[height<=720]',
+            '360': 'best[height<=360]'
+        };
+        const format = qualityMap[quality] || qualityMap['360'];
+
+        const randomBytes = crypto.randomBytes(8).toString('hex');
+        const tempFilename = `${randomBytes}.mp4`;
+        const outputPath = path.join(tempDir, tempFilename);
+
+        const ytdlpArgs = [
+            '--progress',
+            '-f', format,
+            '--output', outputPath,
+            videoUrl
+        ];
+
+        const ytdlp = spawn(ytdlpCommand, ytdlpArgs);
+
+        const progressRegex = /\% /;
+
+        ytdlp.stderr.on('data', (data) => {
+            const text = data.toString();
+            const match = text.match(progressRegex);
+            if (match) {
+                const percent = parseFloat(match.groups.percent);
+                socket.emit('progress', { percent });
+            }
+        });
+
+        ytdlp.on('error', (error) => {
+            console.error(`yt-dlp spawn error: ${error.message}`);
+            socket.emit('download-error', { message: 'Failed to start the download process.' });
+        });
+
+        ytdlp.on('close', (code) => {
+            if (code === 0) {
+                console.log("Download completed successfully.");
+                socket.emit('complete', { filename: tempFilename });
+            } else {
+                console.error(`yt-dlp process exited with code ${code}`);
+                socket.emit('download-error', { message: `Download failed. The video may not be available in ${quality}p or another error occurred.` });
+                // Clean up failed download
+                if (fs.existsSync(outputPath)) {
+                    fs.unlinkSync(outputPath);
+                }
+            }
+        });
+    });
+
+    socket.on("disconnect", () => {
+        console.log("User disconnected:", socket.id);
+    });
+});
+
+server.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
 });
