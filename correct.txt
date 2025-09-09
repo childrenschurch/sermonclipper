@@ -13,3 +13,5 @@ File not found.
 
 
 it appears the file is created as 5f51726a00b4a9d8.mp4.webm but it does not convert to mp4 and 83781ee8ea96804e.mp4.webm Also after the entire process I want all the temp_downloads file to be deleted.
+
+Also remove the progressbar and only leave the spinning progress indicator if you can not implement the progressbar to work and show actual metered progress.

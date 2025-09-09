@@ -35,7 +35,7 @@ app.get("/download-file/:filename", (req, res) => {
             if (err) {
                 console.error("Error sending file:", err);
             }
-            // Clean up the file after download
+            // Clean up the file after download attempt
             fs.unlink(filePath, (unlinkErr) => {
                 if (unlinkErr) {
                     console.error("Error deleting temp file:", unlinkErr);
@@ -65,18 +65,21 @@ io.on("connection", (socket) => {
         const outputPath = path.join(tempDir, tempFilename);
 
         const ytdlpArgs = [
+            videoUrl,
             '--progress',
+            '--newline', // Makes progress parsing more reliable
+            '--merge-output-format', 'mp4', // Ensures the final file is mp4
             '-f', format,
-            '--output', outputPath,
-            videoUrl
+            '-o', outputPath,
         ];
 
         const ytdlp = spawn(ytdlpCommand, ytdlpArgs);
 
-        const progressRegex = /\% /;
+        const progressRegex = /\\\[download\\\\]\\s+(?<percent>\\d+\\.\\d)%/;
 
         ytdlp.stderr.on('data', (data) => {
             const text = data.toString();
+            console.log("yt-dlp stderr:", text); // Added for debugging progress
             const match = text.match(progressRegex);
             if (match) {
                 const percent = parseFloat(match.groups.percent);

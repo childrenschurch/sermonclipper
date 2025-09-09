@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sermon Clipper</title>
@@ -12,112 +12,121 @@
     <link rel="stylesheet" href="/css/style.css" />
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <header>
-            <h1>Sermon Clipper</h1>
-            <p>Download YouTube Clips in various qualities</p>
-        </header>
-        <main>
-            <div id="download-ui" class="download-form">
-                <div class="form-group">
-                    <label for="url">YouTube Clip URL</label>
-                    <input type="text" id="url" name="url" placeholder="Paste your YouTube clip link here" required />
-                </div>
-                <div class="quality-buttons">
-                    <button class="quality-btn" data-quality="360">Download 360p</button>
-                    <button class="quality-btn" data-quality="720">Download 720p</button>
-                    <button class="quality-btn" data-quality="1080">Download 1080p</button>
-                </div>
-            </div>
-        </main>
-        <footer>
-            <p>
-              &copy; 2025 CH CHURCH APP. All rights reserved.
-            </p>
-        </footer>
+      <header>
+        <h1>Sermon Clipper</h1>
+        <p>Download YouTube Clips in various qualities</p>
+      </header>
+      <main>
+        <div id="download-ui" class="download-form">
+          <div class="form-group">
+            <label for="url">YouTube Clip URL</label>
+            <input
+              type="text"
+              id="url"
+              name="url"
+              placeholder="Paste your YouTube clip link here"
+              required />
+          </div>
+          <div class="quality-buttons">
+            <button class="quality-btn" data-quality="360">
+              Download 360p
+            </button>
+            <button class="quality-btn" data-quality="720">
+              Download 720p
+            </button>
+            <button class="quality-btn" data-quality="1080">
+              Download 1080p
+            </button>
+          </div>
+        </div>
+      </main>
+      <footer>
+        <p>&copy; 2025 Christ's Heart Ministries.</p>
+      </footer>
     </div>
 
     <!-- Socket.IO Client -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
+      const socket = io();
 
-        const downloadButtons = document.querySelectorAll('.quality-btn');
-        const urlInput = document.getElementById('url');
+      const downloadButtons = document.querySelectorAll(".quality-btn");
+      const urlInput = document.getElementById("url");
 
-        function isValidYouTubeUrl(url) {
-            if (!url) return false;
-            const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+$/;
-            return youtubeRegex.test(url);
-        }
+      function isValidYouTubeUrl(url) {
+        if (!url) return false;
+        const youtubeRegex =
+          /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+$/;
+        return youtubeRegex.test(url);
+      }
 
-        downloadButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const videoUrl = urlInput.value;
-                const quality = button.dataset.quality;
+      downloadButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const videoUrl = urlInput.value;
+          const quality = button.dataset.quality;
 
-                if (!isValidYouTubeUrl(videoUrl)) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Invalid URL',
-                        text: 'Please enter a valid YouTube URL.',
-                    });
-                    return;
-                }
+          if (!isValidYouTubeUrl(videoUrl)) {
+            Swal.fire({
+              icon: "error",
+              title: "Invalid URL",
+              text: "Please enter a valid YouTube URL.",
+            });
+            return;
+          }
 
-                socket.emit('download-video', { videoUrl, quality });
+          socket.emit("download-video", { videoUrl, quality });
 
-                Swal.fire({
-                    title: `Preparing your ${quality}p download...`,
-                    html: `
+          Swal.fire({
+            title: `Preparing your ${quality}p download...`,
+            html: `
                         <p>Please wait while we start the download.</p>
                         <div class="swal-progress-container">
                             <div id="swal-progress-bar" class="swal-progress-bar"></div>
                         </div>
                     `,
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-            });
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+            },
+          });
         });
+      });
 
-        socket.on('progress', ({ percent }) => {
-            const progressBar = document.getElementById('swal-progress-bar');
-            if (progressBar) {
-                progressBar.style.width = percent + '%';
-                Swal.update({
-                    title: `Downloading... ${Math.round(percent)}%`
-                });
-            }
+      socket.on("progress", ({ percent }) => {
+        const progressBar = document.getElementById("swal-progress-bar");
+        if (progressBar) {
+          progressBar.style.width = percent + "%";
+          Swal.update({
+            title: `Downloading... ${Math.round(percent)}%`,
+          });
+        }
+      });
+
+      socket.on("complete", ({ filename }) => {
+        Swal.fire({
+          icon: "success",
+          title: "Download Ready!",
+          html: "Your video is ready. Click the button below to download.",
+          confirmButtonText: "Download Now",
+          showCancelButton: true,
+          cancelButtonText: "Close",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            window.location.href = `/download-file/${filename}`;
+          }
         });
+      });
 
-        socket.on('complete', ({ filename }) => {
-            Swal.fire({
-                icon: 'success',
-                title: 'Download Ready!',
-                html: 'Your video is ready. Click the button below to download.',
-                confirmButtonText: 'Download Now',
-                showCancelButton: true,
-                cancelButtonText: 'Close'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = `/download-file/${filename}`;
-                }
-            });
+      socket.on("download-error", ({ message }) => {
+        Swal.fire({
+          icon: "error",
+          title: "Download Failed",
+          text: message,
         });
-
-        socket.on('download-error', ({ message }) => {
-            Swal.fire({
-                icon: 'error',
-                title: 'Download Failed',
-                text: message,
-            });
-        });
-
+      });
     </script>
-</body>
+  </body>
 </html>
