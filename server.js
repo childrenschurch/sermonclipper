@@ -19,6 +19,9 @@ if (!fs.existsSync(tempDir)) {
     fs.mkdirSync(tempDir);
 }
 
+// In-memory store for active download processes
+const activeDownloads = new Map();
+
 app.set("view engine", "ejs");
 app.use(express.static("public"));
 
@@ -92,42 +95,60 @@ io.on("connection", (socket) => {
 
             const ytdlp = spawn(ytdlpCommand, ytdlpArgs);
 
-            const progressRegex = /\\\\[download\\\\]\\s+(?<percent>\\d+\\. \\d)%/; // Corrected regex for progress parsing
-
-            ytdlp.stderr.on('data', (data) => {
-                const text = data.toString();
-                console.log("yt-dlp stderr:", text); // Added for debugging progress
-                const match = text.match(progressRegex);
-                if (match) {
-                    const percent = parseFloat(match.groups.percent);
-                    socket.emit('progress', { percent });
-                }
-            });
+            activeDownloads.set(socket.id, { process: ytdlp, path: outputPath });
 
             ytdlp.on('error', (error) => {
                 console.error(`yt-dlp spawn error: ${error.message}`);
                 socket.emit('download-error', { message: 'Failed to start the download process.' });
+                activeDownloads.delete(socket.id);
             });
 
             ytdlp.on('close', (code) => {
-                if (code === 0) {
-                    console.log("Download completed successfully.");
-                    const finalTitle = `${videoTitle} [${quality}p]`;
-                    socket.emit('complete', { filename: tempFilename, title: finalTitle });
-                } else {
-                    console.error(`yt-dlp process exited with code ${code}`);
-                    socket.emit('download-error', { message: `Download failed. The video may not be available in ${quality}p or another error occurred.` });
-                    // Clean up failed download
-                    if (fs.existsSync(outputPath)) {
-                        fs.unlinkSync(outputPath);
+                if (activeDownloads.has(socket.id)) { // Check if it wasn't cancelled
+                    if (code === 0) {
+                        console.log("Download completed successfully.");
+                        const finalTitle = `${videoTitle} [${quality}p]`;
+                        socket.emit('complete', { filename: tempFilename, title: finalTitle });
+                    } else {
+                        console.error(`yt-dlp process exited with code ${code}`);
+                        socket.emit('download-error', { message: `Download failed. The video may not be available in ${quality}p or another error occurred.` });
+                        // Clean up failed download
+                        if (fs.existsSync(outputPath)) {
+                            fs.unlinkSync(outputPath);
+                        }
                     }
+                    activeDownloads.delete(socket.id);
                 }
             });
         });
     });
 
+    socket.on('cancel-download', () => {
+        if (activeDownloads.has(socket.id)) {
+            console.log(`Cancelling download for ${socket.id}`);
+            const { process, path } = activeDownloads.get(socket.id);
+            process.kill(); // Stop the yt-dlp process
+            activeDownloads.delete(socket.id); // Remove from active downloads
+            // Clean up the partial file
+            if (fs.existsSync(path)) {
+                fs.unlink(path, (err) => {
+                    if (err) console.error("Error deleting cancelled file:", err);
+                });
+            }
+        }
+    });
+
     socket.on("disconnect", () => {
         console.log("User disconnected:", socket.id);
+        // Clean up if user disconnects mid-download
+        if (activeDownloads.has(socket.id)) {
+            const { process, path } = activeDownloads.get(socket.id);
+            process.kill();
+            activeDownloads.delete(socket.id);
+            if (fs.existsSync(path)) {
+                fs.unlinkSync(path);
+            }
+        }
     });
 });
 

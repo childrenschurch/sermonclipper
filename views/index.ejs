@@ -6,7 +6,7 @@
     <title>Sermon Clipper</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
@@ -59,10 +59,18 @@
 
                     Swal.fire({
                         title: `Downloading your ${quality}p video`,
-                        text: 'Please wait, this may take a moment.',
+                        html: `
+                            <div class="swal2-loading"></div>
+                            <p>Please wait, this may take a moment.</p>
+                        `,
                         allowOutsideClick: false,
-                        didOpen: () => {
-                            Swal.showLoading();
+                        showCancelButton: true,
+                        cancelButtonText: 'Cancel',
+                        showConfirmButton: false, // Hide default OK button
+                    }).then((result) => {
+                        if (result.dismiss === Swal.DismissReason.cancel) {
+                            socket.emit('cancel-download');
+                            Swal.fire('Cancelled', 'Your download has been cancelled.', 'info');
                         }
                     });
                 });
