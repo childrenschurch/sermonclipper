@@ -1,132 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sermon Clipper</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap"
-      rel="stylesheet" />
-    <link rel="stylesheet" href="/css/style.css" />
-    <!-- SweetAlert2 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  </head>
-  <body>
+</head>
+<body>
     <div class="container">
-      <header>
-        <h1>Sermon Clipper</h1>
-        <p>Download YouTube Clips in various qualities</p>
-      </header>
-      <main>
-        <div id="download-ui" class="download-form">
-          <div class="form-group">
-            <label for="url">YouTube Clip URL</label>
-            <input
-              type="text"
-              id="url"
-              name="url"
-              placeholder="Paste your YouTube clip link here"
-              required />
-          </div>
-          <div class="quality-buttons">
-            <button class="quality-btn" data-quality="360">
-              Download 360p
-            </button>
-            <button class="quality-btn" data-quality="720">
-              Download 720p
-            </button>
-            <button class="quality-btn" data-quality="1080">
-              Download 1080p
-            </button>
-          </div>
-        </div>
-      </main>
-      <footer>
-        <p>&copy; 2025 Christ's Heart Ministries.</p>
-      </footer>
+        <header>
+            <h1>Sermon Clipper</h1>
+            <p>Download YouTube Clips in various qualities</p>
+        </header>
+        <main>
+            <div id="download-ui" class="download-form">
+                <div class="form-group">
+                    <label for="url">YouTube Clip URL</label>
+                    <input type="text" id="url" name="url" placeholder="Paste your YouTube clip link here" required>
+                </div>
+                <div class="quality-buttons">
+                    <button class="quality-btn" data-quality="360">Download 360p</button>
+                    <button class="quality-btn" data-quality="720">Download 720p</button>
+                    <button class="quality-btn" data-quality="1080">Download 1080p</button>
+                </div>
+            </div>
+        </main>
+        <footer>
+            <p>&copy; Christ's Heart Ministries International.</p>
+            <p>
+              <small>Created by <a href="https://grealm.org">G-Realm Studio</a></small>
+            </p>
+        </footer>
     </div>
 
-    <!-- Socket.IO Client -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
-      const socket = io();
+        document.addEventListener('DOMContentLoaded', () => {
+            const socket = io();
 
-      const downloadButtons = document.querySelectorAll(".quality-btn");
-      const urlInput = document.getElementById("url");
+            const downloadButtons = document.querySelectorAll('.quality-btn');
+            const urlInput = document.getElementById('url');
 
-      function isValidYouTubeUrl(url) {
-        if (!url) return false;
-        const youtubeRegex =
-          /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+$/;
-        return youtubeRegex.test(url);
-      }
+            downloadButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const videoUrl = urlInput.value;
+                    const quality = button.dataset.quality;
 
-      downloadButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-          const videoUrl = urlInput.value;
-          const quality = button.dataset.quality;
+                    if (!videoUrl) {
+                         Swal.fire({ icon: 'error', title: 'URL is Missing', text: 'Please paste a URL in the box.' });
+                         return;
+                    }
 
-          if (!isValidYouTubeUrl(videoUrl)) {
-            Swal.fire({
-              icon: "error",
-              title: "Invalid URL",
-              text: "Please enter a valid YouTube URL.",
+                    socket.emit('download-video', { videoUrl, quality });
+
+                    Swal.fire({
+                        title: `Downloading your ${quality}p video`,
+                        text: 'Please wait, this may take a moment.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                });
             });
-            return;
-          }
 
-          socket.emit("download-video", { videoUrl, quality });
+            socket.on('complete', ({ filename, title }) => {
+                const downloadUrl = `/download-file/${filename}?title=${encodeURIComponent(title)}`;
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Download Ready!',
+                    html: `Your video "<b>${title}</b>" is ready.`, 
+                    confirmButtonText: 'Download Now',
+                    showCancelButton: true,
+                    cancelButtonText: 'Close'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = downloadUrl;
+                    }
+                });
+            });
 
-          Swal.fire({
-            title: `Preparing your ${quality}p download...`,
-            html: `
-                        <p>Please wait while we start the download.</p>
-                        <div class="swal-progress-container">
-                            <div id="swal-progress-bar" class="swal-progress-bar"></div>
-                        </div>
-                    `,
-            allowOutsideClick: false,
-            didOpen: () => {
-              Swal.showLoading();
-            },
-          });
+            socket.on('download-error', ({ message }) => {
+                Swal.fire({ icon: 'error', title: 'Download Failed', text: message });
+            });
         });
-      });
-
-      socket.on("progress", ({ percent }) => {
-        const progressBar = document.getElementById("swal-progress-bar");
-        if (progressBar) {
-          progressBar.style.width = percent + "%";
-          Swal.update({
-            title: `Downloading... ${Math.round(percent)}%`,
-          });
-        }
-      });
-
-      socket.on("complete", ({ filename }) => {
-        Swal.fire({
-          icon: "success",
-          title: "Download Ready!",
-          html: "Your video is ready. Click the button below to download.",
-          confirmButtonText: "Download Now",
-          showCancelButton: true,
-          cancelButtonText: "Close",
-        }).then((result) => {
-          if (result.isConfirmed) {
-            window.location.href = `/download-file/${filename}`;
-          }
-        });
-      });
-
-      socket.on("download-error", ({ message }) => {
-        Swal.fire({
-          icon: "error",
-          title: "Download Failed",
-          text: message,
-        });
-      });
     </script>
-  </body>
+</body>
 </html>

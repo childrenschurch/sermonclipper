@@ -66,18 +66,42 @@ header p {
 
 .quality-buttons button {
     flex-grow: 1;
-    font-size: 1rem; /* Smaller font for the smaller buttons */
-    padding: 0.7rem 1rem;
-    background-color: #5A4FCF;
     color: #FFFFFF;
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    transition: background-color 0.3s ease;
+    transition: all 0.3s ease;
+    font-weight: 500;
 }
 
-.quality-buttons button:hover {
-    background-color: #483d9e;
+/* 360p Button */
+button[data-quality="360"] {
+    background-color: #4CAF50; /* Green */
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+}
+button[data-quality="360"]:hover {
+    background-color: #45a049;
+}
+
+/* 720p Button */
+button[data-quality="720"] {
+    background-color: #2196F3; /* Blue */
+    padding: 0.8rem 1.2rem;
+    font-size: 1rem;
+}
+button[data-quality="720"]:hover {
+    background-color: #1e87db;
+}
+
+/* 1080p Button */
+button[data-quality="1080"] {
+    background-color: #f44336; /* Red */
+    padding: 1rem 1.5rem;
+    font-size: 1.1rem;
+}
+button[data-quality="1080"]:hover {
+    background-color: #da190b;
 }
 
 footer {
