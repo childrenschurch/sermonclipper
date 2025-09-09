@@ -87,3 +87,16 @@ footer {
     border-radius: 5px;
     margin-bottom: 1.5rem;
 }
+
+.quality-buttons {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.quality-buttons button {
+    flex-grow: 1;
+    font-size: 1rem; /* Smaller font for the smaller buttons */
+    padding: 0.7rem 1rem;
+}

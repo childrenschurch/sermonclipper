@@ -4,8 +4,6 @@ const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Final workaround for local Windows execution.
-// Use the user-provided absolute path on Windows.
 const ytdlpCommand = process.platform === 'win32' ? 'C:\\Users\\dell\\Documents\\yt-dlp\\yt-dlp.exe' : 'yt-dlp';
 
 function isValidUrl(string) {
@@ -26,7 +24,15 @@ app.get("/", (req, res) => {
 });
 
 app.post("/download", (req, res) => {
-  const videoUrl = req.body.url;
+  const { url: videoUrl, quality } = req.body;
+
+  // Validate quality and set format string
+  const qualityMap = {
+    '1080': 'bestvideo[height<=1080]+bestaudio/best[height<=1080]',
+    '720': 'bestvideo[height<=720]+bestaudio/best[height<=720]',
+    '360': 'best[height<=360]' // 360p often has audio included
+  };
+  const format = qualityMap[quality] || qualityMap['360']; // Default to 360p
 
   if (!videoUrl || !isValidUrl(videoUrl)) {
     return res.render("index", { error: "Please enter a valid URL.", success: null });
@@ -60,10 +66,11 @@ app.post("/download", (req, res) => {
       return;
     }
 
-    res.header("Content-Disposition", `attachment; filename="${videoTitle}.mp4"`);
+    const safeVideoTitle = `${videoTitle} [${quality}p]`;
+    res.header("Content-Disposition", `attachment; filename="${safeVideoTitle}.mp4"`);
 
     const ytdlp = spawn(ytdlpCommand, [
-      "-f", "best[height<=360]",
+      "-f", format,
       "--output", "-",
       videoUrl
     ]);

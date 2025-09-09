@@ -1,38 +1,60 @@
-
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Clip Downloader</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/style.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CH Video Downloader</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap"
+      rel="stylesheet" />
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
     <div class="container">
-        <header>
-            <h1>ClipDown</h1>
-            <p>Download YouTube Clips in 360p</p>
-        </header>
-        <main>
-            <% if (error) { %>
-                <div class="error-message">
-                    <p><%= error %></p>
-                </div>
-            <% } %>
-            <form action="/download" method="POST" class="download-form">
-                <div class="form-group">
-                    <label for="url">YouTube Clip URL</label>
-                    <input type="text" id="url" name="url" placeholder="Paste your YouTube clip link here" required>
-                </div>
-                <button type="submit">Download</button>
-            </form>
-        </main>
-        <footer>
-            <p>&copy; 2025 CH CHURCH APP. All rights reserved.</p>
-        </footer>
+      <header>
+        <h1>ClipDown</h1>
+        <p>Download YouTube Clips in various qualities</p>
+      </header>
+      <main>
+        <% if (error) { %>
+        <div class="error-message">
+          <p><%= error %></p>
+        </div>
+        <% } %>
+        <form action="/download" method="POST" class="download-form">
+          <div class="form-group">
+            <label for="url">YouTube Clip URL</label>
+            <input
+              type="text"
+              id="url"
+              name="url"
+              placeholder="Paste your YouTube clip link here"
+              required />
+          </div>
+          <div class="quality-buttons">
+            <button type="submit" name="quality" value="360">
+              Download 360p
+            </button>
+            <button type="submit" name="quality" value="720">
+              Download 720p
+            </button>
+            <button type="submit" name="quality" value="1080">
+              Download 1080p
+            </button>
+          </div>
+        </form>
+      </main>
+      <footer>
+        <p>
+          &copy; 2025 Christ's Heart Ministries International. All rights
+          reserved.
+        </p>
+        <small style="color: rgb(121, 121, 121)"
+          >Built by <a href="https://grealm.org">G-Realm Studio</a>
+        </small>
+      </footer>
     </div>
-</body>
+  </body>
 </html>
